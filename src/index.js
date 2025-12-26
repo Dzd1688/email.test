@@ -112,7 +112,7 @@ export default {
         attachmentUrls.map((item) => item.url)
       ); // 附件 URL 列表
       // 发送到后端API
-      const backendResponse = await fetch("https://aiarticle.erweima.ai/api/v1/cf/email", {
+      const backendResponse = await fetch("https://1c18b2e8a413.ngrok-free.app/api/v1/cf/email", {
         method: "POST",
         body: formData,
       });
