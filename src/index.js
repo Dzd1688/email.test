@@ -59,7 +59,7 @@ export default {
       return this.email(mockMessage, env, ctx);
     } catch (error) {
       console.error("Error:", error);
-      return new Response("Error processing email", { status: 500 });
+      return new Response(error.message, { status: 500 });
     }
   },
   async email(message, env, ctx) {
