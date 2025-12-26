@@ -15,7 +15,7 @@ export default {
         {
           status: 404,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -59,16 +59,19 @@ export default {
       return this.email(mockMessage, env, ctx);
     } catch (error) {
       console.error("Error:", error);
-      return new Response(error.message, { status: 500 });
+      return new Response("Error processing email", { status: 500 });
     }
   },
   async email(message, env, ctx) {
     try {
       // 真正的流式解析：边读取边处理附件，避免内存累积
-      const { attachmentUrls, cleanBody } = await this.streamParseEmail(message.raw, env);
+      const { attachmentUrls, cleanBody } = await this.streamParseEmail(
+        message.raw,
+        env,
+      );
       // 转发邮件
       try {
-        await message.forward("2832263188@qq.com");
+        await message.forward("zengdamo2023@gmail.com");
       } catch (error) {
         console.error("转发 邮件 Error:", error);
         // 记录异常 上报企业微信
@@ -95,7 +98,7 @@ export default {
         emlBuffer = new TextEncoder().encode(contentStr);
       }
 
-      console.log(`📊 处理成功 - 附件数量: ${attachmentUrls.length}`);
+      console.log(`处理成功 - 附件数量: ${JSON.stringify(attachmentUrls)}`);
 
       const emlFile = new File([emlBuffer], "email.eml", {
         type: "message/rfc822",
@@ -109,16 +112,21 @@ export default {
       formData.append("raw", emlFile); // 传递 File 对象，就像 message.raw 一样
       formData.append(
         "urlList",
-        attachmentUrls.map((item) => item.url)
+        attachmentUrls.map((item) => item.url),
       ); // 附件 URL 列表
       // 发送到后端API
-      const backendResponse = await fetch("https://1c18b2e8a413.ngrok-free.app/api/v1/cf/email", {
-        method: "POST",
-        body: formData,
-      });
+      const backendResponse = await fetch(
+        "https://aiarticle.erweima.ai/api/v1/cf/email",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (!backendResponse.ok) {
-        throw new Error(`后端API请求失败: ${backendResponse.status} ${backendResponse.statusText}`);
+        throw new Error(
+          `后端API请求失败: ${backendResponse.status} ${backendResponse.statusText}`,
+        );
       }
 
       return new Response("OK", { status: 200 });
@@ -142,7 +150,10 @@ export default {
 
       if (rawContent instanceof ReadableStream) {
         contentStream = rawContent;
-      } else if (rawContent instanceof ArrayBuffer || rawContent instanceof Uint8Array) {
+      } else if (
+        rawContent instanceof ArrayBuffer ||
+        rawContent instanceof Uint8Array
+      ) {
         // 已经是二进制数据，直接使用字符串解析（因为数据量不大）
         const contentString =
           rawContent instanceof ArrayBuffer
@@ -181,7 +192,8 @@ export default {
 
           // 检查是否是multipart邮件
           const boundaryMatch =
-            headerContent.match(/boundary="([^"]+)"/) || headerContent.match(/boundary=([^;\s]+)/);
+            headerContent.match(/boundary="([^"]+)"/) ||
+            headerContent.match(/boundary=([^;\s]+)/);
           if (boundaryMatch) {
             boundary = boundaryMatch[1];
             isMultipart = true;
@@ -192,12 +204,20 @@ export default {
       // 如果不是multipart邮件或读取失败，返回简单结果
       if (!isMultipart || !headerComplete) {
         reader.cancel();
-        const fallbackContent = typeof rawContent === "string" ? rawContent : headerContent;
+        const fallbackContent =
+          typeof rawContent === "string" ? rawContent : headerContent;
         return { attachmentUrls: [], cleanBody: fallbackContent };
       }
 
       // 继续流式处理邮件体
-      await this.processEmailBodyStream(reader, buffer, boundary, attachmentUrls, bodyParts, env);
+      await this.processEmailBodyStream(
+        reader,
+        buffer,
+        boundary,
+        attachmentUrls,
+        bodyParts,
+        env,
+      );
 
       // 构建清理后的邮件内容（只包含头部和正文）
       let cleanBody = headerContent + "\n\n";
@@ -207,12 +227,12 @@ export default {
         const textParts = bodyParts.filter((part) => part.type === "body");
         if (textParts.length > 0) {
           cleanBody += `--${boundary}\n`;
-          cleanBody += textParts.map((part) => part.content).join(`\n--${boundary}\n`);
+          cleanBody += textParts
+            .map((part) => part.content)
+            .join(`\n--${boundary}\n`);
           cleanBody += `\n--${boundary}--`;
         }
       }
-
-      console.log(`📎 邮件解析完成，附件数量: ${attachmentUrls.length}`);
 
       return { attachmentUrls, cleanBody };
     } catch (error) {
@@ -230,7 +250,8 @@ export default {
     try {
       // 检查是否是 multipart 邮件
       const boundaryMatch =
-        contentString.match(/boundary="([^"]+)"/) || contentString.match(/boundary=([^;\s]+)/);
+        contentString.match(/boundary="([^"]+)"/) ||
+        contentString.match(/boundary=([^;\s]+)/);
       if (boundaryMatch) {
         boundary = boundaryMatch[1];
         isMultipart = true;
@@ -251,24 +272,31 @@ export default {
         ) {
           // 发现附件
           const filenameMatch =
-            part.match(/filename="([^"]+)"/) || part.match(/filename=([^;\s]+)/);
+            part.match(/filename="([^"]+)"/) ||
+            part.match(/filename=([^;\s]+)/);
           if (filenameMatch) {
             const filename = filenameMatch[1].replace(/"/g, "");
 
             // 提取附件内容
             const contentStart =
-              part.indexOf("\n\n") !== -1 ? part.indexOf("\n\n") : part.indexOf("\r\n\r\n");
+              part.indexOf("\n\n") !== -1
+                ? part.indexOf("\n\n")
+                : part.indexOf("\r\n\r\n");
             if (contentStart !== -1) {
               const content = part
                 .substring(contentStart + (part.indexOf("\n\n") !== -1 ? 2 : 4))
                 .trim();
 
-              // 移除大小限制，全部处理
+              // 处理不同类型的附件内容
               try {
-                const contentBuffer = this.base64ToUint8Array(content);
+                const contentBuffer = this.toUint8Array(filename, content);
 
                 // 移除大小限制，全部上传
-                const uploadResult = await this.uploadAttachmentToR2(contentBuffer, filename, env);
+                const uploadResult = await this.uploadAttachmentToR2(
+                  contentBuffer,
+                  filename,
+                  env,
+                );
                 attachmentUrls.push({
                   filename: filename,
                   url: uploadResult.downloadUrl,
@@ -313,7 +341,14 @@ export default {
   },
 
   // 流式处理邮件体（真正的流式处理）
-  async processEmailBodyStream(reader, initialBuffer, boundary, attachmentUrls, bodyParts, env) {
+  async processEmailBodyStream(
+    reader,
+    initialBuffer,
+    boundary,
+    attachmentUrls,
+    bodyParts,
+    env,
+  ) {
     let buffer = initialBuffer;
     const boundaryMarker = `--${boundary}`;
     let partsProcessed = 0;
@@ -335,7 +370,13 @@ export default {
 
           if (part.trim()) {
             partsProcessed++;
-            await this.processEmailPart(part, boundary, attachmentUrls, bodyParts, env);
+            await this.processEmailPart(
+              part,
+              boundary,
+              attachmentUrls,
+              bodyParts,
+              env,
+            );
           }
 
           // 移除已处理的部分
@@ -357,7 +398,13 @@ export default {
       // 处理最后剩余的部分
       if (buffer.trim() && !buffer.startsWith("--")) {
         partsProcessed++;
-        await this.processEmailPart(buffer, boundary, attachmentUrls, bodyParts, env);
+        await this.processEmailPart(
+          buffer,
+          boundary,
+          attachmentUrls,
+          bodyParts,
+          env,
+        );
       }
     } finally {
       reader.cancel();
@@ -371,12 +418,19 @@ export default {
       part.includes("Content-Disposition:attachment")
     ) {
       // 这是附件部分
-      const filenameMatch = part.match(/filename="([^"]+)"/) || part.match(/filename=([^;\s]+)/);
+      const filenameMatch =
+        part.match(/filename="([^"]+)"/) || part.match(/filename=([^;\s]+)/);
       if (filenameMatch) {
         const filename = filenameMatch[1].replace(/"/g, "");
 
         // 统一流式处理所有附件
-        await this.processAttachment(part, filename, attachmentUrls, bodyParts, env);
+        await this.processAttachment(
+          part,
+          filename,
+          attachmentUrls,
+          bodyParts,
+          env,
+        );
       }
     } else {
       // 正文部分
@@ -386,7 +440,16 @@ export default {
 
   // 判断是否为视频文件
   isVideoFile(filename) {
-    const videoExtensions = [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v"];
+    const videoExtensions = [
+      ".mp4",
+      ".avi",
+      ".mkv",
+      ".mov",
+      ".wmv",
+      ".flv",
+      ".webm",
+      ".m4v",
+    ];
     const ext = filename.toLowerCase().substring(filename.lastIndexOf("."));
     return videoExtensions.includes(ext);
   },
@@ -402,25 +465,34 @@ export default {
     try {
       // 提取附件内容
       const contentStart =
-        part.indexOf("\n\n") !== -1 ? part.indexOf("\n\n") : part.indexOf("\r\n\r\n");
+        part.indexOf("\n\n") !== -1
+          ? part.indexOf("\n\n")
+          : part.indexOf("\r\n\r\n");
       if (contentStart === -1) {
         console.warn(`⚠️  无法解析附件内容: ${filename}`);
         bodyParts.push({ type: "attachment", content: part, filename });
         return;
       }
 
-      const content = part.substring(contentStart + (part.indexOf("\n\n") !== -1 ? 2 : 4)).trim();
+      const content = part
+        .substring(contentStart + (part.indexOf("\n\n") !== -1 ? 2 : 4))
+        .trim();
 
-      const contentBuffer = this.base64ToUint8Array(content);
+      // 处理不同类型的附件内容
+      const contentBuffer = this.toUint8Array(filename, content);
 
       if (contentBuffer.byteLength === 0) {
-        console.error(`❌ 文件解码失败: ${filename}`);
+        console.error(`❌ 文件处理失败: ${filename}`);
         bodyParts.push({ type: "attachment", content: part, filename });
         return;
       }
 
       // 统一流式上传到R2（无大小限制）
-      const uploadResult = await this.uploadAttachmentToR2(contentBuffer, filename, env);
+      const uploadResult = await this.uploadAttachmentToR2(
+        contentBuffer,
+        filename,
+        env,
+      );
 
       attachmentUrls.push({
         filename: filename,
@@ -438,65 +510,30 @@ export default {
     }
   },
 
-  // 判断是否是大附件文件
-  isLargeAttachment(filename) {
-    const largeFileExtensions = [
-      ".mp4",
-      ".avi",
-      ".mkv",
-      ".mov",
-      ".wmv",
-      ".flv",
-      ".webm", // 视频
-      ".mp3",
-      ".wav",
-      ".flac",
-      ".aac",
-      ".ogg",
-      ".m4a", // 音频
-      ".zip",
-      ".rar",
-      ".7z",
-      ".tar",
-      ".gz", // 压缩包
-      ".exe",
-      ".dmg",
-      ".iso",
-      ".bin", // 可执行文件
-      ".pdf",
-      ".docx",
-      ".pptx",
-      ".xlsx", // 大文档
+  // 将附件内容转换为Uint8Array（根据文件类型自动选择编码方式）
+  toUint8Array(filename, content) {
+    // 检查是否是文本文件（通过文件名扩展名判断）
+    const textExtensions = [
+      ".txt",
+      ".html",
+      ".htm",
+      ".css",
+      ".js",
+      ".json",
+      ".xml",
+      ".csv",
     ];
+    const extension = filename
+      .toLowerCase()
+      .substring(filename.lastIndexOf("."));
 
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf("."));
-    return largeFileExtensions.includes(ext);
-  },
-
-  // 流式转换为字符串
-  async streamToString(stream) {
-    const reader = stream.getReader();
-    const chunks = [];
-    let done = false;
-
-    while (!done) {
-      const { value, done: streamDone } = await reader.read();
-      done = streamDone;
-      if (value) {
-        chunks.push(value);
-      }
+    if (textExtensions.includes(extension)) {
+      // 文本文件直接转换为Uint8Array
+      return new TextEncoder().encode(content);
+    } else {
+      // 二进制文件需要base64解码
+      return this.base64ToUint8Array(content);
     }
-
-    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-    const result = new Uint8Array(totalLength);
-    let offset = 0;
-
-    for (const chunk of chunks) {
-      result.set(chunk, offset);
-      offset += chunk.length;
-    }
-
-    return new TextDecoder().decode(result);
   },
 
   // 高效地将base64字符串转换为Uint8Array，避免内存溢出
@@ -559,12 +596,12 @@ export default {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       if (!uploadResponse.ok) {
         throw new Error(
-          `文件流上传API请求失败: ${uploadResponse.status} ${uploadResponse.statusText}`
+          `文件流上传API请求失败: ${uploadResponse.status} ${uploadResponse.statusText}`,
         );
       }
 
@@ -610,9 +647,11 @@ export default {
       ".mp4": "video/mp4",
       ".wav": "audio/wav",
       ".doc": "application/msword",
-      ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ".docx":
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ".xls": "application/vnd.ms-excel",
-      ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ".xlsx":
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       ".avi": "video/x-msvideo",
       ".mkv": "video/x-matroska",
       ".mov": "video/quicktime",
@@ -646,7 +685,9 @@ export default {
               '</font>\n> to:     <font color=\"comment\">' +
               to +
               '</font>\n> time: <font color=\"comment\">' +
-              new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }) +
+              new Date().toLocaleString("zh-CN", {
+                timeZone: "Asia/Shanghai",
+              }) +
               "</font>\n> 邮件内容如下: \n\n" +
               con,
           },
@@ -659,7 +700,7 @@ export default {
               "content-type": "application/json",
             },
             body: JSON.stringify(dataText),
-          }
+          },
         );
       }
     } catch (error) {

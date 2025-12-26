@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.env
+.env.local
+.wrangler/
+dist/
+.DS_Store
+.vscode/
+*.tgz
+*.tar.gz
+.dev.vars
