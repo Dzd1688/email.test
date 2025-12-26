@@ -5,17 +5,6 @@ compatibility_date = "2024-01-01"
 [env.production]
 name = "round-tooth-c2f0"
 
-# R2存储桶配置
-# https://tempfile.aiquickdraw.com
-[[r2_buckets]]
-binding = "TEMPFILE_BUCKET"
-bucket_name = "tempfile"
-
-# https://file.aiquickdraw.com
-[[r2_buckets]]
-binding = "FILE_BUCKET"
-bucket_name = "file"
-
 # 环境变量配置
 [vars]
 
