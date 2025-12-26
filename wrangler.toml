@@ -1,0 +1,33 @@
+name = "cf-gemini-nano-pro-workers"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[env.production]
+name = "cf-gemini-nano-pro-workers"
+
+# R2存储桶配置
+# https://tempfile.aiquickdraw.com
+[[r2_buckets]]
+binding = "TEMPFILE_BUCKET"
+bucket_name = "tempfile"
+
+# https://file.aiquickdraw.com
+[[r2_buckets]]
+binding = "FILE_BUCKET"
+bucket_name = "file"
+
+# 环境变量配置
+[vars]
+
+# 启用日志
+[observability.logs]
+enabled = true
+
+# 静态资源
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = [
+  "/api/*",        # API calls go to Worker first
+  "!/pages/*",     # EXCEPTION: For /pages/*, try static assets first
+]

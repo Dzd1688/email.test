@@ -1,0 +1,40 @@
+{
+  "name": "cf-gemini-nano-pro-workers",
+  "version": "1.0.0",
+  "description": "Cloudflare Workers 通过Gemini官网调用nano-banana-pro",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "dev:remote": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler build",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "preinstall": "npx simple-git-hooks"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "upload",
+    "api"
+  ],
+  "devDependencies": {
+    "nano-staged": "^0.8.0",
+    "prettier": "^3.6.2",
+    "simple-git-hooks": "^2.13.0",
+    "wrangler": "^4.20.3"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.0.0"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "./node_modules/.bin/nano-staged"
+  },
+  "nano-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{json,css,scss,md}": [
+      "prettier --write"
+    ]
+  }
+}
