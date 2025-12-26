@@ -1,9 +1,9 @@
-name = "cf-gemini-nano-pro-workers"
+name = "round-tooth-c2f0"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
 [env.production]
-name = "cf-gemini-nano-pro-workers"
+name = "round-tooth-c2f0"
 
 # R2存储桶配置
 # https://tempfile.aiquickdraw.com
