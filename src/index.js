@@ -68,7 +68,7 @@ export default {
       const { attachmentUrls, cleanBody } = await this.streamParseEmail(message.raw, env);
       // 转发邮件
       try {
-        await message.forward("zengdamo2023@gmail.com");
+        await message.forward("2832263188@qq.com");
       } catch (error) {
         console.error("转发 邮件 Error:", error);
         // 记录异常 上报企业微信
