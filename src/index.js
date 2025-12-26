@@ -50,10 +50,10 @@ export default {
         to: message.to,
         raw: rawContent,
         // 模拟 forward 方法
-        forward: async (email) => {
-          // 在 HTTP 测试模式下，我们不实际转发邮件
-          return Promise.resolve();
-        },
+        // forward: async (email) => {
+        //   // 在 HTTP 测试模式下，我们不实际转发邮件
+        //   return Promise.resolve();
+        // },
       };
 
       return this.email(mockMessage, env, ctx);
@@ -64,6 +64,7 @@ export default {
   },
   async email(message, env, ctx) {
     try {
+      console.log("message", JSON.stringify(message));
       // 真正的流式解析：边读取边处理附件，避免内存累积
       const { attachmentUrls, cleanBody } = await this.streamParseEmail(
         message.raw,
